@@ -18,8 +18,9 @@ What is vapourword
 ==================
 Vapourword aims at being a completely FLOSS replacement for wordle and
 more. The project is structured around two modules:
-* vw-wordlist - core generating the list of weighted words
-* vw-draw - graphical engine to render the list of weighted words
+
+* vw-wordlist , core generating the list of weighted words
+* vw-draw , graphical engine to render the list of weighted words
 
 Vapourword design
 =================
