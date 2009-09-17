@@ -60,7 +60,12 @@ vw-worldlist
 
 vw-draw
 -------
-1. More to be added here
+1. Implement a test framework, OpenGL, word:weight file input and pictorial output
+2. Font renderer
+3. Bounding box based cloud creation onto pixel collision field
+4. Gaussian graphical techniques to create a pleasant layout and improve collision layer
+5. Mapping and config for colours, extra weights and element relationships
+6. Animated weight and relationship changes
 
 License
 =======
