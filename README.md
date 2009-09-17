@@ -43,6 +43,12 @@ eventually move to python with [pyglet][3] and maybe bits done with
 bin packing since there doesn't seem to be an existing one freely
 available.
 
+VW-Draw will target first creating clouds from simple pairs of word:weight
+then move on to more complex scenarios with several weights and animated
+weight changes. It will create simple images to start with, though a GUI is
+on the cards for some point in the future.
+
+
 Roadmap
 =======
 vw-worldlist
