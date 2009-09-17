@@ -18,8 +18,8 @@ What is vapourword
 ==================
 Vapourword aims at being a completely FLOSS replacement for wordle and
 more. The project is structured around two modules:
-- vw-wordlist - core generating the list of weighted words
-- vw-draw - graphical engine to render the list of weighted words
+* vw-wordlist - core generating the list of weighted words
+* vw-draw - graphical engine to render the list of weighted words
 
 Vapourword design
 =================
@@ -47,14 +47,14 @@ Roadmap
 =======
 vw-worldlist
 ------------
-* Implement a skeleton with support for python plugins to calculate weights and helper functions to deal with input/output
-* Write a plugin to generate list of weighted words based on word frequency
-* Add spell checking support (English only)
-* Add stemming support
+1. Implement a skeleton with support for python plugins to calculate weights and helper functions to deal with input/output
+2. Write a plugin to generate list of weighted words based on word frequency
+3. Add spell checking support (English only)
+4. Add stemming support
 
 vw-draw
 -------
-* More to be added here
+1. More to be added here
 
 License
 =======
@@ -75,7 +75,7 @@ Authors
 =======
 Spike & Gabriel ;)
 
-[1] http://www.wordle.net/ "Wordle.net"
-[2] http://www.nltk.org/ "Natural Language Toolkit"
-[3] http://www.pyglet.org/ "a cross-platform windowing and multimedia library for Python"
-[4] http://docs.python.org/library/ctypes.html "A foreign function library for Python"
+[1]: http://www.wordle.net/ "Wordle.net"
+[2]: http://www.nltk.org/ "Natural Language Toolkit"
+[3]: http://www.pyglet.org/ "a cross-platform windowing and multimedia library for Python"
+[4]: http://docs.python.org/library/ctypes.html "A foreign function library for Python"
