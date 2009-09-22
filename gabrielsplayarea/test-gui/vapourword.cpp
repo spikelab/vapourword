@@ -46,6 +46,8 @@ struct PAIR
 
 #define NUMBER_OF_PAIRS 128
 
+#define GAP_AMOUNT (1.0f)
+
 PAIR pairs[NUMBER_OF_PAIRS];
 
 void drawError ()
@@ -62,7 +64,6 @@ void drawError ()
 
 void drawWord (int word)
 {
-	glDisable(GL_DEPTH_TEST);
 	glColor3f (pairs[word].r,pairs[word].g,pairs[word].b);
 	glBegin (GL_QUADS);
 	glVertex3f(pairs[word].x1, pairs[word].y2, pairs[word].z);
@@ -79,7 +80,7 @@ void drawWord (int word)
 	glVertex3f(pairs[word].x1, pairs[word].y1, pairs[word].z);
 	glEnd ();
 
-	glColor3f (0,0,0);
+	glColor3f (0,0,1);
 	glBegin (GL_LINE_LOOP);
 	glVertex3f(pairs[word].x1, pairs[word].y2, pairs[word].z);
 	glVertex3f(pairs[word].x2, pairs[word].y2, pairs[word].z);
@@ -94,60 +95,34 @@ float GetRand()
 	return (float)rand() / (float)RAND_MAX;
 }
 
-bool PlacePairCheckRange(int p, float x, float y, int rangeStart, int rangeEnd)
+int PlacePairCheckRange(int p, float x, float y, int rangeStart, int rangeEnd)
 {
-	float newx1 = x - (pairs[p].width / 2);
-	float newy1 = y - (pairs[p].height / 2);
-	float newx2 = x + (pairs[p].width / 2);
-	float newy2 = y + (pairs[p].height / 2);
+	float newx1 = x - (pairs[p].width / 2) - GAP_AMOUNT;
+	float newy1 = y - (pairs[p].height / 2) - GAP_AMOUNT;
+	float newx2 = x + (pairs[p].width / 2) + GAP_AMOUNT;
+	float newy2 = y + (pairs[p].height / 2) + GAP_AMOUNT;
 	for(int i = rangeStart; i <= rangeEnd; i++)
 	{
 		if(i == p)
 			continue;
-			
-		//px is the new one, which should be smaller than ix
-		//so p should fit into i so checking that none of ps
-		//points are contained in i gives us a collx check
-		
-/*
-		if((newx1 > pairs[i].x1) && (newx1 < pairs[i].x2) && (newy1 > pairs[i].y1) && (newy1 < pairs[i].y2))
-			return false;
-		if((newx2 > pairs[i].x1) && (newx2 < pairs[i].x2) && (newy1 > pairs[i].y1) && (newy1 < pairs[i].y2))
-			return false;
-		if((newx1 > pairs[i].x1) && (newx1 < pairs[i].x2) && (newy2 > pairs[i].y1) && (newy2 < pairs[i].y2))
-			return false;
-		if((newx2 > pairs[i].x1) && (newx2 < pairs[i].x2) && (newy2 > pairs[i].y1) && (newy2 < pairs[i].y2))
-			return false;
-		if((pairs[i].x1 > newx1) && (pairs[i].x1 < newx2) && (pairs[i].y1 > newy1) && (pairs[i].y1 < newy2))
-			return false;
-		if((pairs[i].x2 > newx1) && (pairs[i].x2 < newx2) && (pairs[i].y1 > newy1) && (pairs[i].y1 < newy2))
-			return false;
-		if((pairs[i].x1 > newx1) && (pairs[i].x1 < newx2) && (pairs[i].y2 > newy1) && (pairs[i].y2 < newy2))
-			return false;
-		if((pairs[i].x2 > newx1) && (pairs[i].x2 < newx2) && (pairs[i].y2 > newy1) && (pairs[i].y2 < newy2))
-			return false;
 
-		if((x > pairs[i].x1) && (x < pairs[i].x2) && (y > pairs[i].y1) && (y < pairs[i].y2))
-			return false;
-		if((pairs[i].x > newx1) && (pairs[i].x < newx2) && (pairs[i].y > newy1) && (pairs[i].y < newy2))
-			return false;
-*/
-		if(!(((newx1 < pairs[i].x1) && (newx2 < pairs[i].x1)) || ((newx1 > pairs[i].x2) && (newx2 > pairs[i].x2))))
+		//collx?
+		if(!(((newx1 <= pairs[i].x1) && (newx2 <= pairs[i].x1)) || ((newx1 >= pairs[i].x2) && (newx2 >= pairs[i].x2))))
 		{
-			if(!(((newy1 < pairs[i].y1) && (newy2 < pairs[i].y1)) || ((newy1 > pairs[i].y2) && (newy2 > pairs[i].y2))))
+			if(!(((newy1 <= pairs[i].y1) && (newy2 <= pairs[i].y1)) || ((newy1 >= pairs[i].y2) && (newy2 >= pairs[i].y2))))
 			{
-				return false;
+				return i;
 			}
 		}
 		
 	}
 	pairs[p].x = x;
 	pairs[p].y = y;
-	pairs[p].x1 = newx1;
-	pairs[p].y1 = newy1;
-	pairs[p].x2 = newx2;
-	pairs[p].y2 = newy2;
-	return true;
+	pairs[p].x1 = x - (pairs[p].width / 2);
+	pairs[p].y1 = y - (pairs[p].height / 2);
+	pairs[p].x2 = x + (pairs[p].width / 2);
+	pairs[p].y2 = y + (pairs[p].height / 2);
+	return -1;
 }
 
 float centerx = 0;
@@ -159,7 +134,7 @@ int TryToFit()
 	float tryDistYStart = 150;
 	float tryDistXChange = .1;
 	float tryDistYChange = .1;
-	PlacePairCheckRange(NUMBER_OF_PAIRS - 1, centerx, centery, 0, 0);
+	PlacePairCheckRange(NUMBER_OF_PAIRS - 1, centerx, centery, 0, -1);
 	int invi = 0;
 	for(int i = NUMBER_OF_PAIRS - 2; i > -1; i--)
 	{
@@ -167,10 +142,10 @@ int TryToFit()
 		float tryDistX = tryDistXStart + (tryDistXChange * invi);
 		float tryDistY = tryDistYStart + (tryDistYChange * invi);
 		int t = 0;
-		int tryHoriz = 2;
+		int tryHoriz = 10;
 		for(t = 0; t < tryHoriz; t++)
 		{
-			if(PlacePairCheckRange(i, centerx + (tryDistX * (GetRand() - .5)), centery + (tryDistY * (GetRand() - .5)), i + 1, NUMBER_OF_PAIRS - 1))
+			if(-1 == PlacePairCheckRange(i, centerx + (tryDistX * (GetRand() - .5)), centery + (tryDistY * (GetRand() - .5)), i + 1, NUMBER_OF_PAIRS - 1))
 			{
 				break;
 			}
@@ -183,7 +158,7 @@ int TryToFit()
 			pairs[i].height = tmp;
 			for(; t < 1000; t++)
 			{
-				if(PlacePairCheckRange(i, centerx + (tryDistX * (GetRand() - .5)), centery + (tryDistY * (GetRand() - .5)), i + 1, NUMBER_OF_PAIRS - 1))
+				if(-1 == PlacePairCheckRange(i, centerx + (tryDistX * (GetRand() - .5)), centery + (tryDistY * (GetRand() - .5)), i + 1, NUMBER_OF_PAIRS - 1))
 				{
 					break;
 				}
@@ -195,26 +170,74 @@ int TryToFit()
 		}
 		
 		//compact
-		for(int t = 0; t < 100; t++)
+		bool collxX = false;
+		bool collxY = false;
+		for(int t = 0; t < 1000; t++)
 		{
-			float newx = ((pairs[i].x * (1000 - t)) + (t * centerx)) / 1000.0f;
-			float newy = ((pairs[i].y * (1000 - t)) + (t * centery)) / 1000.0f;
-			if(!PlacePairCheckRange(i, newx, newy, i + 1, NUMBER_OF_PAIRS - 1))
+//			if(!collxX)
 			{
-				if(!PlacePairCheckRange(i, newx, pairs[i].y, i + 1, NUMBER_OF_PAIRS - 1))
+				float newx = ((pairs[i].x * (1000 - t)) + (t * centerx)) / 1000.0f;
+				int collxWithX = -1;
+				if((collxWithX = PlacePairCheckRange(i, newx, pairs[i].y, i + 1, NUMBER_OF_PAIRS - 1)) > -1)
 				{
-					if(!PlacePairCheckRange(i, pairs[i].x, newy, i + 1, NUMBER_OF_PAIRS - 1))
+/*					if((pairs[i].x < pairs[collxWithX].x) && (pairs[i].x < centerx))
+					{
+//						pairs[i].x = PlacePairCheckRange(i, (pairs[collxWithX].x - ((pairs[i].width + pairs[collxWithX].width) / 2)) - GAP_AMOUNT, pairs[i].y, 0, -1);
+						pairs[i].x = PlacePairCheckRange(i, (pairs[collxWithX].x - ((pairs[i].width + pairs[collxWithX].width) / 2)) - 1, pairs[i].y, 0, NUMBER_OF_PAIRS - 1);
+					}
+					else
+					{
+//						pairs[i].x = PlacePairCheckRange(i, (pairs[collxWithX].x + ((pairs[i].width + pairs[collxWithX].width) / 2)) + GAP_AMOUNT, pairs[i].y, 0, -1);
+						pairs[i].x = PlacePairCheckRange(i, (pairs[collxWithX].x + ((pairs[i].width + pairs[collxWithX].width) / 2)) + 1, pairs[i].y, 0, NUMBER_OF_PAIRS - 1);
+					}*/
+//					collxX = true;
+				}
+			}
+			
+//			if(0)//!collxY)
+			{
+				float newy = ((pairs[i].y * (1000 - t)) + (t * centery)) / 1000.0f;
+				int collxWithY = -1;
+				if((collxWithY = PlacePairCheckRange(i, pairs[i].x, newy, i + 1, NUMBER_OF_PAIRS - 1)) > -1)
+				{
+/*					if(pairs[i].y < pairs[collxWithY].y)
+					{
+						pairs[i].y = (pairs[collxWithY].y - ((pairs[i].height + pairs[collxWithY].height) / 2)) - GAP_AMOUNT;
+					}
+					else
+					{
+						pairs[i].y = (pairs[collxWithY].y + ((pairs[i].height + pairs[collxWithY].height) / 2)) + GAP_AMOUNT;
+					}*/
+//					collxY = true;
+				}
+			}
+			
+//			if(collxX && collxY)
+//				break;
+				
+//			collxY = false;
+//			collxX = false;
+/*
+			if((collxWithBoth = PlacePairCheckRange(i, newx, newy, i + 1, NUMBER_OF_PAIRS - 1)) > -1)
+			{
+				if((collxWithX = PlacePairCheckRange(i, newx, pairs[i].y, i + 1, NUMBER_OF_PAIRS - 1)) > -1)
+				{
+					if((collxWithY = PlacePairCheckRange(i, pairs[i].x, newy, i + 1, NUMBER_OF_PAIRS - 1)) > -1)
 					{
 						break;
 					}
 				}
-			}
+				else
+				{
+					
+				}
+			}*/
 		}
 		invi++;
 	}
 	return 1;
 }
-
+/*
 int Compact()
 {
 	for(int i = NUMBER_OF_PAIRS - 2; i > -1; i--)
@@ -237,7 +260,7 @@ int Compact()
 		}
 	}
 }
-
+*/
 void RandomBruteForce()
 {
 	//try 1000 times and score based on total width and height
@@ -275,9 +298,9 @@ void init()
 		pairs[i].x = 0;
 		pairs[i].y = 0;
 		pairs[i].z = 0;
-		pairs[i].r = pairs[i].weight;
+		pairs[i].r = weight;
 		pairs[i].g = 1;
-		pairs[i].b = pairs[i].weight;
+		pairs[i].b = weight;
 
 		memset(pairs[i].word,0,64);
 		for(int j = 0; j < 64; j++)
@@ -307,8 +330,12 @@ void init()
 		pairs[i].height /= squWeight;
 		pairs[i].weight /= weight;
 		pairs[i].r /= weight;
+		pairs[i].r *= pairs[i].r;
+		pairs[i].r *= pairs[i].r;
 		pairs[i].g = 1;
 		pairs[i].b /= weight;
+		pairs[i].b *= pairs[i].b;
+		pairs[i].b *= pairs[i].b;
 		
 		totalArea += (pairs[i].width * pairs[i].height);
 	}
@@ -338,7 +365,7 @@ void init()
 	
 	RandomBruteForce();
 
-	//centralise
+/*	//centralise
 	float minx = pairs[NUMBER_OF_PAIRS - 1].x;
 	float miny = pairs[NUMBER_OF_PAIRS - 1].y;
 	float maxx = pairs[NUMBER_OF_PAIRS - 1].x + pairs[NUMBER_OF_PAIRS - 1].width;
@@ -370,17 +397,33 @@ void init()
 	{
 		pairs[i].x += shiftx;
 		pairs[i].y += shifty;
-	}
+	}*/
 }
 
 void render()
 {
 	if(!error)
 	{
+		glEnable(GL_LINE_SMOOTH);
+		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glDisable(GL_DEPTH_TEST);
 		for(int i = NUMBER_OF_PAIRS - 1; i > -1; i--)
 		{
 			drawWord(i);
 		}
+		glColor3f (1,0,1);
+		glBegin (GL_LINES);
+		glVertex3f(-100,0,0);
+		glVertex3f(0,0,0);
+		glVertex3f(100,0,0);
+		glVertex3f(0,0,0);
+		glVertex3f(0,-100,0);
+		glVertex3f(0,0,0);
+		glVertex3f(0,100,0);
+		glVertex3f(0,0,0);
+		glEnd ();
 	}
 	else
 	{
