@@ -3,6 +3,14 @@ import functools
 class Plugins(object):
     """ just a class to hold a list of different types of plugins """
     all = {}
+
+    class PluginException(Exception):
+        """ base exception for plugins """
+        pass
+
+    class ArgumentError(PluginException):
+        pass
+
     
     @classmethod
     def register_type(cls, typ):
