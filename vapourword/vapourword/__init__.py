@@ -1,3 +1,4 @@
+import sys
 import os
 import functools
 from string import punctuation
@@ -13,9 +14,15 @@ def input_file(arg):
         return open(arg).read()
     return input
 
+@Plugins.register_input
+def input_stdin(arg):
+    def input():
+        return sys.stdin.read()
+    return input
+
 
 @Plugins.register_output
-def output_console(arg):
+def output_stdout(arg):
     def output(data):
         for word, weight in data:
             print word, weight
@@ -75,12 +82,12 @@ def run(args=None):
     parser = optparse.OptionParser()
     parser.add_option("-i", "--input-plugin", 
             dest="input_plugin", 
-            default="file", 
+            default="stdin", 
             metavar="PLUGIN[:ARG]",
     )
     parser.add_option("-o", "--output-plugin", 
             dest="output_plugin", 
-            default="console", 
+            default="stdout", 
             metavar="PLUGIN[:ARG]",
     )
     parser.add_option("-s", "--split-plugin", 
@@ -117,15 +124,18 @@ def run(args=None):
 
     plugin_modules = []
 
+    # do we want to save and restore sys.path?
+    # dont think it matters much 
+    sys.path.insert(0, options.plugin_paths)
     for name in options.plugin_modules:
-        fp, pathname, description = imp.find_module(name, options.plugin_paths)
-        try:
-            mod = imp.load_module(name, fp, pathname, description)
-            plugin_modules.append(mod)
-        finally:
-            # Since we may exit via an exception, close fp explicitly.
-            if fp:
-                fp.close()
+        mod = __import__(
+                name, 
+                globals(), 
+                locals(), 
+                fromlist=[name.split('.')[-1]], 
+                level=0,
+        )
+        plugin_modules.append(mod)
 
     # not quite sure on the best way to pass arguments to plugins 
     # so this lets you do 
