@@ -149,21 +149,8 @@ def run(args=None):
 
     (options, args) = parser.parse_args(args)
 
-    # probably dont need this but what the hell...
-    plugin_modules = []
-
-    # do we want to save and restore sys.path?
-    # dont think it matters much 
-    sys.path.insert(0, options.plugin_paths)
-    for name in options.plugin_modules:
-        mod = __import__(
-                name, 
-                globals(), 
-                locals(), 
-                fromlist=[name.split('.')[-1]], 
-                level=0,
-        )
-        plugin_modules.append(mod)
+    # load any modules specified on the command line 
+    Plugins.load_modules(options.plugin_modules, paths=options.plugin_paths)
 
     # print a list of plugins 
     if options.list_plugins:
@@ -194,26 +181,32 @@ def run(args=None):
         if func:
             return func(arg)
         else:
+            print >>sys.stderr, "%s plugin %s not found" % (typ, plugin)
             return None
 
-    try:
-        input_plugin = get_plugin('input', options.input_plugin)
-        output_plugin = get_plugin('output', options.output_plugin)
-        split_plugin = get_plugin('split', options.split_plugin)
-        filter_plugin = get_plugin('filter', options.filter_plugin)
-        weight_plugin = get_plugin('weight', options.weight_plugin)
-    except Plugins.ArgumentError, e:
-        print >>sys.stderr, "%s: %s" % (type(e).__name__, str(e))
-        return 1
+    # get all our functions ready to do stuff - we'll have 
+    # the inner functions of the plugins here - or None if the plugin 
+    # wasnt found/loaded  
 
-    input = input_plugin()
-    data = vapourword(
-            input, 
-            split_plugin,
-            filter_plugin,
-            weight_plugin,
-    )
-    output_plugin(data)
+    funcs = {}
+
+    for name in ('input', 'output', 'split', 'filter', 'weight'):
+        try:
+            funcs[name] = get_plugin(name, getattr(options, '%s_plugin' % name))
+        except Plugins.ArgumentError, e:
+            print >>sys.stderr, "%s: %s" % (type(e).__name__, str(e))
+            return 1
+        if name not in ('split', 'filter') and funcs[name] is None:
+            print >>sys.stderr, "%s plugin cannot be None" % name
+            return 1
+
+    # actually do stuff 
+    funcs['output'](vapourword(
+            funcs['input'](),
+            funcs['split'],
+            funcs['filter'],
+            funcs['weight'],
+    ))
 
 
 if __name__ == '__main__':
