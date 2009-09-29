@@ -7,47 +7,35 @@
 
 * { margin: 0px; padding:0px; font-family: sans-serif }
 
-div___ { border: 1px solid red; }
-
-#cloud { width: 1000px; height: 1000px; border: 1px solid green; }
-
 </style>
 
 </head>
 
 <body>
 
-<div id='cloud'>
-</div>
-
 <iframe id="cloudframe" src="blank.svg" width="500" height="500"></iframe>
 
 <script language="javascript" src="jquery.js"></script>
 <script language="javascript" src="cloudyword.js"></script>
-<script language="javascript" src="cloudyword_html.js"></script>
 <script language="javascript" src="cloudyword_svg.js"></script>
+<script language="javascript" src="jquery.vapourword.js"></script>
 <script language="javascript" src="out.json"></script>
 <script language="javascript">
-
-$(document).ready(function() {
-    $('#cloudframe').ready(function() {
-        console.log(this);
-    });
-});
 
 var s = new Date();
 //console.profile();
 var cloud = new vapourword.Cloud(items, 500, 500, {
-    max_font_size: 100, 
+    max_font_size: 50, 
     min_font_size: 8,
     output: vapourword.output_svg,
     output_target: $('#cloudframe')[0].contentDocument,
+    add_chunk_time: 500,
+    add_chunk_size: 5,
 });
 //console.profileEnd();
 var s2 = new Date();
 console.log(s2 - s);
 console.log(items.length);
-
 </script>
 
 </body>

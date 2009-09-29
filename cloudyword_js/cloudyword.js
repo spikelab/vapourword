@@ -212,7 +212,8 @@ vapourword.Cloud = function(items, width, height, options) {
     var start_index = 0;
 
     function add_chunk(cloud) {
-        for( var i=start_index; i!=start_index+cloud.options.add_chunk_size; i++ ) {
+        for( var i=start_index; i!=start_index+cloud.options.add_chunk_size,i!=items.length; i++ ) {
+            
             var word = items[i][0];
             var importance = items[i][1];
 

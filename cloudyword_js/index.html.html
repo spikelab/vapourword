@@ -1,0 +1,42 @@
+<html>
+
+
+<head>
+
+<style>
+
+* { margin: 0px; padding:0px; font-family: sans-serif }
+
+#cloud { width: 1000px; height: 1000px; border: 1px solid green; }
+
+</style>
+
+</head>
+
+<body>
+
+<div id='cloud'>
+</div>
+
+<script language="javascript" src="jquery.js"></script>
+<script language="javascript" src="cloudyword.js"></script>
+<script language="javascript" src="cloudyword_html.js"></script>
+<script language="javascript" src="out.json"></script>
+<script language="javascript">
+
+var s = new Date();
+//console.profile();
+var cloud = new vapourword.Cloud(items, 500, 500, {
+    max_font_size: 100, 
+    min_font_size: 8,
+    output: vapourword.output_html,
+    output_target: $('#cloud'),
+});
+//console.profileEnd();
+var s2 = new Date();
+console.log(s2 - s);
+console.log(items.length);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<html>
+<head>
+
+<style>
+
+* { margin: 0px; padding:0px; font-family: sans-serif }
+.cloud { border: 1px solid green; }
+
+</style>
+
+</head>
+
+<body>
+
+<!--<div id="cloud1" class="cloud">vapour vapour vapour cloud cloud javascript</div>-->
+<div id="cloud2" class="cloud"></div>
+
+This is an example of the jquery plugin for vapourword.
+This demo counts all the words in the page and creates a word cloud automagically.
+Isnt vapourword great? Im going to keep saying vapourword to make the word vapourword 
+appear bigger in the word cloud.
+vapourword yay
+vapourword yay
+vapourword yay
+vapourword yay
+<br/>
+This is the javascript used:
+<pre>
+$(document).ready(function() {
+    $('#cloud2').vapourcloud({source: $('body')});
+});
+</pre>
+
+<script language="javascript" src="jquery.js"></script>
+<script language="javascript" src="cloudyword.js"></script>
+<script language="javascript" src="cloudyword_html.js"></script>
+<script language="javascript" src="jquery.vapourword.js"></script>
+<script language="javascript">
+
+$(document).ready(function() {
+    $('#cloud2').vapourcloud({source: $('body')});
+});
+
+</script>
+
+</body>
+</html>
