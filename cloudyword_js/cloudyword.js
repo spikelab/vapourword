@@ -27,6 +27,7 @@ vapourword.Edge = function (p1, p2, n, l, weight) {
     this.n = n;
     this.l = l;
     this.weight = weight;
+    this.fail_count = 0;
 }
 
 
@@ -83,6 +84,7 @@ vapourword.defaults = {
     add_chunk_size: 10,
     add_chunk_time: 200,
     output: null,
+    max_fails: 10,
 };
 
 
@@ -119,6 +121,7 @@ vapourword.Cloud = function(items, width, height, options) {
 
         var sel_edge = 0;
         var edge = null;
+        var to_remove = [];
 
         while(true) {
             if( sel_edge >= edge_selection.length ) {
@@ -168,6 +171,18 @@ vapourword.Cloud = function(items, width, height, options) {
             if( !collides ) {
                 break;
             }
+
+            edge.fail_count ++;
+            if( edge.fail_count > 5 ) {
+                to_remove.push(edge.original_index);
+            }
+            
+        }
+
+        if( to_remove.length ) {
+            for( var i=to_remove.length-1; i>0; i-- ) {
+                this.edges.splice(to_remove[i], 1);
+            }
         }
 
         //console.log('chose', edge);
@@ -194,6 +209,7 @@ vapourword.Cloud = function(items, width, height, options) {
 
     this.options.output.init(this);
 
+    this.fails = 0;
     this.placed_words = [];
     this.edges = [];
     
@@ -212,8 +228,9 @@ vapourword.Cloud = function(items, width, height, options) {
     var start_index = 0;
 
     function add_chunk(cloud) {
-        for( var i=start_index; i!=start_index+cloud.options.add_chunk_size,i!=items.length; i++ ) {
-            
+        var i = start_index;
+        var stop = false;
+        while( i < start_index +cloud.options.add_chunk_size && i < items.length ) {
             var word = items[i][0];
             var importance = items[i][1];
 
@@ -226,15 +243,26 @@ vapourword.Cloud = function(items, width, height, options) {
             )
 
             cloud.options.output.calc_size(cloud, item);
-            item.added = cloud.add(item);
+            if( !(item.added = cloud.add(item)) ) {
+                cloud.fails ++;   
+                if( cloud.fails > cloud.options.max_fails ) {
+                    stop = true;
+                }
+            }
             cloud.options.output.render_word(cloud, item);
+            i++;
         }
         start_index += cloud.options.add_chunk_size;
-        if( start_index < items.length ) {
+        if( !stop && (start_index < items.length) ) {
             window.setTimeout(
                 function(){ add_chunk(cloud); }, 
                 cloud.options.add_chunk_time
             );
+        } else {
+            //console.log('done');
+            if( cloud.options.on_complete ) {
+                cloud.options.on_complete(cloud);
+            }
         }
     }
 

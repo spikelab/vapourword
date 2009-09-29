@@ -24,18 +24,22 @@
 <script language="javascript" src="out.json"></script>
 <script language="javascript">
 
+items = items.splice(0, 200);
+console.log(items.length);
+
 var s = new Date();
 //console.profile();
 var cloud = new vapourword.Cloud(items, 500, 500, {
-    max_font_size: 100, 
+    max_font_size: 50, 
     min_font_size: 8,
     output: vapourword.output_html,
     output_target: $('#cloud'),
+    on_complete: function(cloud) {
+        var s2 = new Date();
+        console.log('took', s2 - s);
+    },
 });
 //console.profileEnd();
-var s2 = new Date();
-console.log(s2 - s);
-console.log(items.length);
 </script>
 
 </body>
