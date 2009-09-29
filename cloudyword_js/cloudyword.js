@@ -1,4 +1,27 @@
-function Edge(p1, p2, n, l, weight) {
+(function() {
+
+if( !window.vapourword ) {
+    window.vapourword = vapourword = {};
+} else {
+    vapourword = window.vapourword;
+}
+
+vapourword.util = {};
+vapourword.util.obj_clone = function(obj) {
+    var i, newObj = {};
+    for (i in obj) {
+        newObj[i] = obj[i];
+    } 
+    return newObj;
+};
+vapourword.util.obj_merge = function(obja, objb) {
+    var i;
+    for(i in objb) {
+        obja[i] = objb[i];
+    }   
+};
+
+vapourword.Edge = function (p1, p2, n, l, weight) {
     this.p1 = p1;
     this.p2 = p2;
     this.n = n;
@@ -7,28 +30,17 @@ function Edge(p1, p2, n, l, weight) {
 }
 
 
-function Word(word, importance, font_size, width, height, el) {
+vapourword.Word = function (word, importance, font_size) {
     this.word = word;
     this.importance = importance;
     this.font_size = font_size;
-    this.width = width;
-    this.height = height;
-    this.el = el;
-    
+    this.width = null;
+    this.height = null;
+    this.data = null;
     this.x = null;
     this.y = null;
 
-    this.area = width * height;
-
     this.collides_with = function(other) {
-        if( false ) {
-        console.log(this.x, this.y, this.width, this.height, other.x, other.y, other.width, other.height);
-
-        var l = $('<div style="position:absolute; border: 1px solid grey;"></div>');
-        l.css({left: this.x, top: this.y, width: this.width, height: this.height});
-        $('#cloud').append(l);
-        }
-
         return !((this.y >= other.y+other.height) || (this.y+this.height <= other.y) ||
                  (this.x >= other.x+other.width) || (this.x+this.width <= other.x));
     };
@@ -56,8 +68,7 @@ function Word(word, importance, font_size, width, height, el) {
             var dy = p2[1] - p1[1];
             var l = Math.sqrt(dx*dx + dy*dy);
             var norm = [dy/l, -dx/l];
-            var edge = new Edge(p1, p2, norm, l);
-            //edge.word = this;
+            var edge = new vapourword.Edge(p1, p2, norm, l);
             ret.push(edge);
         };    
 
@@ -66,10 +77,17 @@ function Word(word, importance, font_size, width, height, el) {
 }
 
 
-function Cloud(items, width, height, options) {
-    this.add = function(word) {
-        //console.log('add', word);
+vapourword.defaults = {
+    max_font_size: 100,
+    min_font_size: 10,
+    add_chunk_size: 10,
+    add_chunk_time: 200,
+    output: null,
+};
 
+
+vapourword.Cloud = function(items, width, height, options) {
+    this.add = function(word) {
         if( this.placed_words.length == 0 ) {
             word.x = (this.width / 2) - (word.width / 2);
             word.y = (this.height / 2) - (word.height / 2);
@@ -165,14 +183,16 @@ function Cloud(items, width, height, options) {
         rect_edges.splice(remove, 1);
 
         this.edges = this.edges.concat(rect_edges);
+
         return true;
     }
 
     this.width = width;
     this.height = height;
-    this.options = options;
+    this.options = vapourword.util.obj_clone(vapourword.defaults);
+    vapourword.util.obj_merge(this.options, options);
 
-    $('#cloud').css({width: width, height: height});
+    this.options.output.init(this);
 
     this.placed_words = [];
     this.edges = [];
@@ -187,62 +207,39 @@ function Cloud(items, width, height, options) {
     var min_importance = items[items.length-1][1];
     var diff_importance = max_importance - min_importance;
     var diff_font_size = this.options.max_font_size - this.options.min_font_size;
-    //var font_size_ratio = diff_font_size / diff_importance;
     var font_size_ratio = diff_font_size / diff_importance;
 
+    var start_index = 0;
 
-    for( var i=0; i!=items.length; i++ ) {
-        var word = items[i][0];
-        var importance = items[i][1];
+    function add_chunk(cloud) {
+        for( var i=start_index; i!=start_index+cloud.options.add_chunk_size; i++ ) {
+            var word = items[i][0];
+            var importance = items[i][1];
 
-        var font_size = this.options.min_font_size + (font_size_ratio * (importance-min_importance));
-        var el = $('<div style="position: absolute; font-size:'+font_size+'px; padding: 4px;">'+word.toUpperCase()+'</div>');
-        $('#cloud').append(el);
-        
-        var item = new Word(
-            word, 
-            importance, 
-            font_size,
-            el.width(),
-            el.height(),
-            el
-        )
+            var font_size = cloud.options.min_font_size + (font_size_ratio * (importance-min_importance));
+            
+            var item = new vapourword.Word(
+                word, 
+                importance, 
+                font_size
+            )
 
-        if( this.add(item) ) {
-            item.el.css({left: item.x+'px', top: item.y+'px'});
-        } else {
-            item.el.remove();
+            cloud.options.output.calc_size(cloud, item);
+            item.added = cloud.add(item);
+            cloud.options.output.render_word(cloud, item);
+        }
+        start_index += cloud.options.add_chunk_size;
+        if( start_index < items.length ) {
+            window.setTimeout(
+                function(){ add_chunk(cloud); }, 
+                cloud.options.add_chunk_time
+            );
         }
     }
 
-    if( false ) {
-    for( var i=0; i!= this.edges.length; i++ ) {
-        var l = $('<div style="position: absolute; border: 1px solid blue"></div>');
-
-        var left = this.edges[i].p1[0];
-        var top = this.edges[i].p1[1];
-        var width = (this.edges[i].p2[0] - this.edges[i].p1[0]);
-        var height = (this.edges[i].p2[1] - this.edges[i].p1[1]);
-
-        if( width < 0 ) {
-            width = - width;
-            left = this.edges[i].p2[0];
-        }
-
-        if( height < 0 ) {
-            height = - height;
-            top = this.edges[i].p2[1];
-        }
-
-        l.css({'z-index': 100, left: left+'px', top: top+'px', width: width+'px', height: height+'px'});
-        $('#cloud').append(l);
-    }
-
-    var l = $('<div style="position:absolute; border: 1px solid green"></div>');
-    l.css({'z-index': 200, left: this.width/2+'px', top: this.height/2, width: 1, height: 1});
-    }
-    $('#cloud').append(l);
+    add_chunk(this);
 }
 
 
 
+})();
