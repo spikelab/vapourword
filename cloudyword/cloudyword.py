@@ -9,18 +9,23 @@ import time
 
 import cairo
 
-#try:
-#    import psyco
-#    psyco.full(1)
-#except ImportError:
-#    print >>sys.stderr, "if you installed psyco this would be ~4x faster..."
+try:
+    import psyco
+    psyco.full(1)
+except ImportError:
+    print >>sys.stderr, "if you installed psyco this would be ~4x faster..."
 
 
 class Edge(object):
-    __slots__ = ['p1', 'p2', 'n', 'l']
+    __slots__ = ['p1', 'p2', 'n', 'l', 'weight', 'fail_count']
 
-    def __init__(self, p1, p2, n, l):
-        self.p1, self.p2, self.n, self.l = p1, p2, n, l
+    def __init__(self, p1, p2, n, l=None, weight=None):
+        self.p1, self.p2, self.n, self.l, self.weight = p1, p2, n, l, weight
+        self.fail_count = 0 
+        if self.l is None:
+            dx = p2[0] - p1[0]
+            dy = p2[1] - p1[1]
+            self.l = sqrt(dx*dx + dy*dy)
 
 
 class Word(object):
@@ -33,6 +38,7 @@ class Word(object):
         self.area = width*height
         self.x = None
         self.y = None
+        self.rotate = 0
         self.text_offset_x = text_offset_x
         self.text_offset_y = text_offset_y
 
@@ -94,6 +100,14 @@ class Cloud(object):
             padding=0,
             # start, end, or replace
             insert_new_edges='end',
+            # insert new edges cause by overlap 
+            add_new_edges=False,
+            # maximum times we try to use an edge before its removed from the list 
+            # higher numbers will increase quality
+            max_edge_fails=1000,
+            # maximum times we try to place words and fail before we quit 
+            # higher numbers will increas quality
+            max_placement_fails=10,
         ):
         self.placed_words = []
         self.edges = []
@@ -104,6 +118,10 @@ class Cloud(object):
         self.edge_selection = edge_selection
         self.initial_placement = initial_placement
         self.insert_new_edges = insert_new_edges
+        self.add_new_edges = add_new_edges
+        self.max_edge_fails = max_edge_fails
+        self.max_placement_fails = max_placement_fails
+        self.placement_fails = 0 
 
         self.min_font_size = min_font_size
         self.max_font_size = max_font_size
@@ -160,45 +178,71 @@ class Cloud(object):
                 word.y = self.height - word.height
             self.placed_words.append(word)
             self.edges = word.edges()
-            return 
+            return True
 
         sel_edge = 0
 
+        # just use the natural order of edges 
         if self.edge_selection == "clockwise":
             edge_selection = self.edges
+        # use the reverse natural order of edges
         elif self.edge_selection == "counterclockwise":
             edge_selection = self.edges[::-1]
+        # use a random edge
         elif self.edge_selection == "random":
             edge_selection = self.edges[:]
             shuffle(edge_selection)
+        # try the shortest edges first 
         elif self.edge_selection == "shortest":
             edge_selection = self.edges[:]
             edge_selection.sort(key=lambda e: e.l)
+        # try the longest edges first 
         elif self.edge_selection == "longest":
             edge_selection = self.edges[:]
             edge_selection.sort(key=lambda e: e.l, reverse=True)
+        # use edges closest to the center of the canvas 
+        elif self.edge_selection == 'center_weighted':
+            edge_selection = self.edges[:]
+            hwidth = self.width / 2
+            hheight = self.height / 2
+            for edge in edge_selection:
+                d1x = edge.p1[0] - hwidth
+                d1y = edge.p1[1] - hheight
+                # dont need to sqrt here as we're only comparing them ...
+                d1s = (d1x*d1x + d1y*d1y)
+                d2x = edge.p2[0] - hwidth
+                d2y = edge.p2[1] - hheight
+                d2s = (d2x*d2x + d2y*d2y)
+                ds = min(d1s, d2s)
+                edge.weight = ds
+            edge_selection.sort(key=lambda x: x.weight)
+                
         else:
             raise ValueError("invalid edge_selection value %s" % self.edge_selection)
+
+        to_remove = []
 
         while True:
             try:
                 edge = edge_selection[sel_edge]
             except IndexError:
                 #print "cant place", word
-                return
+                return False
             sel_edge += 1
 
+            rotate = False
+
             if edge.n[1] == -1.0:
-                offset = 0, -word.height
+                offset = (0, -word.height)
                 remove = 2
             elif edge.n[1] == 1.0:
-                offset = -word.width, 0
+                offset = (-word.width, 0)
                 remove = 0
             elif edge.n[0] == -1.0:
-                offset = -word.width, -word.height
+                offset = (-word.width, -word.height)
                 remove = 1
             elif edge.n[0] == 1.0:
-                offset = 0, 0
+                offset = (0, 0)
                 remove = 3
 
             word.x = edge.p1[0] + offset[0]
@@ -221,12 +265,42 @@ class Cloud(object):
             if not collides:
                 break
 
+            edge.fail_count += 1
+            if edge.fail_count > self.max_edge_fails:
+                to_remove.append(edge)
+
+
         edge_index = self.edges.index(edge)
+        split_edge = self.edges[edge_index]
         del self.edges[edge_index]
         self.placed_words.append(word)
         
         rect_edges = word.edges()
+        used_word_edge = rect_edges[remove]
         del rect_edges[remove]
+
+        if to_remove:
+            for edge in to_remove:
+                self.edges.remove(edge)
+
+        # add in new extra edges 
+        # this should add in the extra edges caused by overlaps 
+        if self.add_new_edges:
+            new_edge = Edge(
+                split_edge.p1,
+                used_word_edge.p2,
+                split_edge.n,
+            )
+            if new_edge.l:
+                self.edges.append(new_edge)
+            new_edge = Edge(
+                used_word_edge.p1,
+                split_edge.p2,
+                split_edge.n,
+            )
+            if new_edge.l:
+                self.edges.append(new_edge)
+
         if self.insert_new_edges == 'replace':
             # insert the new edges where we removed the matching one 
             self.edges = self.edges[:edge_index] + rect_edges + self.edges[edge_index:]
@@ -237,6 +311,8 @@ class Cloud(object):
             self.edges = rect_edges + self.edges
         else:
             raise ValueError("invalid insert_new_edges values '%s'" % self.insert_new_edges)
+
+        return True
 
     def get_bounding_box(self):
         """ gets the bounding box of the whole image """
@@ -330,7 +406,11 @@ class SVGCloud(Cloud):
                     txt_width+(self.padding*2), txt_height+(self.padding*2),
                     x_bearing, y_bearing,
             )
-            self.add(item)
+            added = self.add(item)
+            if not added:
+                self.placement_fails += 1
+                if self.placement_fails > self.max_placement_fails:
+                    break
 
     def draw(self, filename="out.svg", debug=False, as_string=False):
         out = [       
@@ -388,12 +468,12 @@ def run():
             ('kuya', 100),
             ('rules', 50),
             ('python', 40),
-            ('cairo', 10),
+            #('cairo', 10),
         ]
     else:
         text = sys.stdin.read()
         items = text_to_items(text, 200)
-        items = [(word.upper(), imp) for word, imp in items]
+        #items = [(word.upper(), imp) for word, imp in items]
 
 
     # a surely too complicated way to make it "easy" to 
@@ -407,7 +487,7 @@ def run():
             500, 500, 
             max_font_size=50, 
             initial_placement='center',
-            #edge_selection='best',
+            edge_selection='center_weighted',
             padding=2,
         )
 
@@ -421,7 +501,7 @@ def run():
         gen_cloud()
 
     t = time.time()
-    clouds[0].draw()
+    clouds[0].draw(debug='--debug' in sys.argv)
     print "time to generate image", time.time()-t, "with", len(clouds[0].placed_words), "words"
 
 
